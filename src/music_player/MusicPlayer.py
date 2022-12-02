@@ -1,7 +1,12 @@
 import pygame
 
 from enum import Enum
-from src.models.Music import Music
+from src.models.Music import Music, get_playlist
+import time
+
+
+def current_milli_time():
+    return round(time.time() * 1000)
 
 
 class MusicPlayer:
@@ -9,9 +14,11 @@ class MusicPlayer:
         pygame.init()
         pygame.mixer.init()
 
+        self.time = current_milli_time()
+
         self.playlist = get_playlist()
         self.state = MusicPlayerState.IDLE
-        self.loop = False
+        self.loop = True
         self.current_music_index = -1
 
     def play(self, music: Music):
@@ -39,11 +46,12 @@ class MusicPlayer:
         if self.current_music_index == self.count() - 1 and not self.loop:
             return
 
-        if self.loop:
+        if self.loop and self.current_music_index == self.count() - 1:
             self.current_music_index = 0
         else:
             self.current_music_index += 1
 
+        print(self.current_music_index)
         next_music = self.playlist[self.current_music_index]
         self.play(next_music)
 
@@ -55,11 +63,19 @@ class MusicPlayer:
         else:
             self.current_music_index -= 1
 
+        print(self.current_music_index)
+
         previous_music = self.playlist[self.current_music_index]
         self.play(previous_music)
 
     def count(self):
         return len(self.playlist)
+
+    def can_do_action(self):
+        current = current_milli_time()
+        diff = current - self.time
+        self.time = current
+        return diff > 5000
 
 
 class MusicPlayerState(Enum):

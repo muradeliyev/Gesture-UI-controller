@@ -2,10 +2,11 @@ import cv2
 import asyncio
 import mediapipe as mp
 
-from typing import Callable, Any
+from typing import Callable, Any, Type
 from src.models.Hand import Hand
 from src.models.Handedness import Handedness
 from src.models.Point import Point
+from src.models.UIEvent import UIEvent
 
 HandLandmark = mp.solutions.hands.HandLandmark
 
@@ -16,7 +17,8 @@ class HandDetector:
         self.hands = mp.solutions.hands.Hands()
         self.drawing_utils = mp.solutions.drawing_utils
 
-    async def detect_hands(self, on_each_hand: Callable[[Hand], Any]) -> tuple[Hand] | None:
+    async def detect_hands(self, on_each_hand: Callable[[Hand], Any],
+                           onnext, onprevious) -> tuple[Hand] | None:
         results = await self._get_processed_hand_results()
         multi_handedness = results.multi_handedness
         multi_hand_landmarks = results.multi_hand_landmarks
@@ -31,6 +33,26 @@ class HandDetector:
                 handedness=Handedness(label))
 
             on_each_hand(hand)
+
+            event = self.get_event(hand)
+            if event is UIEvent.Next:
+                onnext()
+            elif event is UIEvent.Previous:
+                onprevious()
+
+    def get_event(self, hand) -> UIEvent:
+        landmarks = hand.landmarks
+
+        index_finger_tip = landmarks[Hand.INDEX_FINGER_TIP]
+        index_finger_mcp = landmarks[Hand.INDEX_FINGER_MCP]
+        thumb_tip = landmarks[Hand.THUMB_TIP]
+
+        if hand.handedness == Handedness.LEFT and abs(
+                index_finger_mcp.y - index_finger_tip.y) <= 20 and thumb_tip.y < index_finger_mcp.y and index_finger_tip.x > index_finger_mcp.x:
+            return UIEvent.Previous
+        elif hand.handedness == Handedness.RIGHT and abs(
+                index_finger_mcp.y - index_finger_tip.y) <= 20 and index_finger_mcp.y > thumb_tip.y and index_finger_tip.x < index_finger_mcp.x:
+            return UIEvent.Next
 
     async def _get_processed_hand_results(self):
         success, image = self.video_capture.read()

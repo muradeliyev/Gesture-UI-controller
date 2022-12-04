@@ -43,7 +43,7 @@ class MusicPlayer:
         self.state = MusicPlayerState.RESUMED
 
     def next(self):
-        if self.current_music_index == self.count() - 1 and not self.loop:
+        if not self.can_do_action() or self.current_music_index == self.count() - 1 and not self.loop:
             return
 
         if self.loop and self.current_music_index == self.count() - 1:
@@ -56,7 +56,7 @@ class MusicPlayer:
         self.play(next_music)
 
     def previous(self):
-        if self.current_music_index == -1:
+        if not self.can_do_action() or self.current_music_index == -1:
             return
         if self.current_music_index == 0 and self.loop:
             self.current_music_index = self.count() - 1
@@ -71,11 +71,12 @@ class MusicPlayer:
     def count(self):
         return len(self.playlist)
 
-    def can_do_action(self):
+    def can_do_action(self) -> bool:
         current = current_milli_time()
         diff = current - self.time
         self.time = current
-        return diff > 5000
+        print(diff)
+        return diff > 3000
 
 
 class MusicPlayerState(Enum):
